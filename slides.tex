@@ -1,0 +1,576 @@
+\documentclass[14pt,utf8,hyperref={pdfpagelabels=false}]{beamer}
+\usepackage{etex}
+\usepackage{media9}
+
+\usepackage[utf8]{inputenc} % hyperref broken with utf8x
+\usepackage[C40,T1]{fontenc}
+
+\usepackage{graphicx}
+\usepackage{array}
+\usepackage{multirow}
+
+\usepackage[francais]{babel}
+
+\usepackage{algorithmic, algorithm}
+
+\usepackage{tikz, pgfplots}
+\usepackage{tikz-qtree}
+
+\newcommand{\umltextcolor}{ThoughfulBrick}
+\newcommand{\umldrawcolor}{Thoughtless}
+\newcommand{\umlfillcolor}{ThoughtBySome}
+
+%\reserveinserts{28}
+%\usepackage{pgfpages}
+%\setbeameroption{show notes on second screen}
+
+
+\usetikzlibrary{shapes.arrows,chains,positioning,%
+  matrix,patterns,shapes,shapes.multipart,positioning,arrows}
+%\tikzexternalize
+
+\tikzstyle{every picture}+=[remember picture]
+\tikzstyle{na} = [baseline=-.5ex]
+
+\tikzstyle{state}=[rectangle,
+  color=structure.fg,
+  fill=ThoughtBySome,
+  inner sep=0.2cm,
+  rounded corners=2mm]
+
+\tikzstyle{mathbox} = [inner sep=0pt, anchor=base,%
+  node distance=0pt, column sep=0em, thick]
+
+\tikzset{
+  template parameter/.style={
+        append after command={
+            node [draw, densely dashed, umlcolor, font=\ttfamily]
+                at (\tikzlastnode.north east)
+                {#1}
+        }
+    }
+}
+
+\tikzset{onslide/.code args={<#1>#2}{%
+  \only<#1>{\pgfkeysalso{#2}}
+}}
+
+\newcommand{\tikzplaceholder}[1]{%
+  \begingroup\shorthandoff{;}\tikz[na] \node[coordinate] (#1) {};\endgroup}
+
+\newcommand{\blueoverlay}[2]{%
+  \tikz[baseline]{ \node[fill=blue!20,anchor=base,rounded corners=2pt] (#1) {$#2$}; }}
+
+\usetheme{moulardthesis}
+
+\DeclareUnicodeCharacter{00A0}{~}
+
+\title{Closed-loop trajectory following on the HRP-2 platform using ROS}
+\author{Thomas Moulard}
+\date{Tuesday, 27 November 2012}
+
+
+% Setup pdf meta-data.
+\hypersetup{
+pdfauthor = {Thomas Moulard},
+pdftitle = {Closed-loop trajectory following on the HRP-2 platform using ROS},
+pdfsubject = {Closed-loop trajectory following on the HRP-2 platform using ROS},
+pdfkeywords = {},
+pdfcreator = {Thomas Moulard},
+pdfproducer = {Thomas Moulard}
+}
+
+
+\begin{document}
+
+{
+  \usebackgroundtemplate{%
+    \includegraphics[width=\paperwidth,height=\paperheight]{%
+      src/slides/demo1.jpg}}
+  \begin{frame}[plain]
+    \titlepage
+  \end{frame}
+}
+
+%\maxFrameImage{src/slides/demo1.jpg}
+%\maxFrameImage{src/slides/demo2.jpg}
+
+\maxFrameImageWidth{src/slides/footsteps1.jpg}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\begin{slideAction}
+  \frametitle{Robot control}
+
+  \begin{changeleftmargin}{1.1cm}
+  \begin{center}
+
+    \begin{tikzpicture}[%
+        >=latex,
+        node distance=1em,
+        fixed/.style={
+          text width=120pt}]
+      \node [state,fixed] (com) {center of mass};
+      \node [state,fixed, below=of com] (lf) {left foot};
+      \node [state,fixed, below=of lf] (rf) {right foot};
+      \node [state,fixed, below=of rf] (posture) {posture};
+
+      \node [left=of com] (fort) {high priority};
+      \node [left=of posture] (faible) {low priority};
+      \draw[->, line width=1.05]
+      (fort.south) -- (faible.north);
+    \end{tikzpicture}
+  \end{center}
+  \end{changeleftmargin}
+\end{slideAction}
+
+\fullFrameVideo{src/slides/over.jpg}{vid/humanoids11-lbaudouin3.mp4}{%
+    \tiny{%
+      \vspace{-.6cm}%
+      ~\includegraphics[height=.25cm]{src/slides/idea.pdf}~%
+      Real-time Replanning Using 3D Environment for Humanoid Robot,
+      Proc. of Humanoids'11.%
+    }%
+}
+
+\begin{slideAction}
+  \frametitle{Motivation}
+  \begin{center}
+    \begin{tikzpicture}[>=latex]
+        \def\w{0.5}
+        \def\h{0.75}
+
+        \foreach \dy in {0., 1., 2., 3.}
+                 {
+                   % left step planned
+                   \filldraw[pattern=north east lines] (0., \dy)
+                   rectangle (0. + \w, \dy + \h);
+
+                   % right step planned
+                   \filldraw[pattern=north west lines] (1., \dy + 0.5)
+                   rectangle (1. + \w, \dy + \h + 0.5);
+                 }
+
+        % before correction
+        \def\driftx{0.1}
+        \def\drifty{0.05}
+        \def\drifttheta{5.}
+
+        \def\dy{0}
+        % left step planned
+        \draw<2->[style=solid, color=red, rotate=\drifttheta * \dy,line width=1.25]
+        (0. + \driftx * \dy, \drifty * \dy + \dy)
+        rectangle (0. + \driftx * \dy + \w, \drifty * \dy + \dy + \h);
+
+        % right step planned
+        \draw<3->[style=solid, color=red, rotate=\drifttheta * \dy + \drifttheta / 2.,line width=1.25]
+        (1. + \driftx * \dy + \drifty / 2., \drifty * \dy + \drifty / 2. + \dy + 0.5)
+        rectangle (1. + \driftx * \dy + \drifty / 2. + \w, \drifty * \dy + \drifty / 2. + \dy + \h + 0.5);
+
+        \def\dy{1}
+        % left step planned
+        \draw<4->[style=solid, color=red, rotate=\drifttheta * \dy,line width=1.25]
+        (0. + \driftx * \dy, \drifty * \dy + \dy)
+        rectangle (0. + \driftx * \dy + \w, \drifty * \dy + \dy + \h);
+
+        % right step planned
+        \draw<5->[style=solid, color=red, rotate=\drifttheta * \dy + \drifttheta / 2.,line width=1.25]
+        (1. + \driftx * \dy + \drifty / 2., \drifty * \dy + \drifty / 2. + \dy + 0.5)
+        rectangle (1. + \driftx * \dy + \drifty / 2. + \w, \drifty * \dy + \drifty / 2. + \dy + \h + 0.5);
+
+
+        \def\dy{2}
+        \draw<6->[style=solid, color=red,line width=1.25, rotate=\drifttheta] (0. + \driftx, \dy + \drifty)
+        rectangle (0. + \w + \driftx, \dy + \h + \drifty);
+
+        % --- after correction ---
+
+        % left step planned
+        \draw<7->[style=solid, color=green,line width=1.25] (0., \dy)
+        rectangle (0. + \w, \dy + \h);
+
+        \uncover<7->{
+        \draw[smooth,rounded corners=1ex,<-,thick]
+        (-0.3, \dy) -- (-0.3 - 0.05, \dy + 0.2) -- (-0.3 - 0.2, \dy + 0.4)
+        node[midway,left]
+        {
+          $\delta \mathbf{x}$
+        };
+        }
+
+
+        \draw<7->[style=solid, color=green,line width=1.25] (0., \dy)
+        rectangle (0. + \w, \dy + \h);
+        \draw<7->[style=solid, color=green,line width=1.25] (1., \dy + 0.5)
+        rectangle (1. + \w, \dy + \h + 0.5);
+        \def\dy{3}
+        \draw<7->[style=solid, color=green,line width=1.25] (0., \dy)
+        rectangle (0. + \w, \dy + \h);
+        \draw<7->[style=solid, color=green,line width=1.25] (1., \dy + 0.5)
+        rectangle (1. + \w, \dy + \h + 0.5);
+
+        % right step planned
+        \def\dy{2}
+        \draw<8->[style=solid, color=orange,line width=1.25, rotate=\drifttheta * 0.5] (1. + \driftx * .5, \dy + 0.5 + \drifty * 0.5)
+        rectangle (1. + \driftx * 0.5 + \w, \dy + \drifty * 0.5 + \h + 0.5);
+
+        \def\dy{3}
+        % left step planned
+        \draw<9->[style=solid, color=orange,line width=1.25, rotate=\drifttheta * 1.] (0. + \driftx * 1., \dy + \drifty * 1.)
+        rectangle (0. + \w + \driftx * 1., \dy + \h + \drifty * 1.);
+
+        % right step planned
+        \uncover<10-> {
+          \draw[style=solid, color=orange,line width=1.25, rotate=\drifttheta * 1.5] (1. + \driftx * 1.5, \dy + 0.5 + \drifty * 1.5)
+        rectangle (1. + \w + \driftx * 1.5, \dy + \h + 0.5 + \drifty * 1.5);
+        }
+
+      \end{tikzpicture}
+      \end{center}
+\end{slideAction}
+
+\begin{slideAction}
+  \frametitle{Control scheme}
+
+  \begin{changeleftmargin}{1.1cm}
+  \begin{center}
+    \begin{tikzpicture}[%
+        >=latex]
+      \node[state] (gen) {Generation};
+      \node[state, below=of gen] (corr) {Correction};
+      \node[state, below=of corr, align=left,inner sep=0.1ex,
+        shape=rectangle split,
+        rectangle split part align=left,
+        rectangle split parts=5] (ctrl) {Controller%
+        \nodepart{two}\footnotesize{center of mass}
+        \nodepart{three}\footnotesize{left foot}
+        \nodepart{four}\footnotesize{right foot}
+        \nodepart{five}\footnotesize{posture}};
+      \node[state,right=2cm of corr] (loc) {localization};
+
+      %\draw[-,style=dashed] (2,-3) -- (2,3);
+
+      \uncover<3-> {
+        \draw[->] (loc.west) -- (corr.east)
+        node [at start,left,font=\tiny,yshift=0.2cm]
+        {$\hat{\mathbf{x}}(t)$};
+      }
+
+      \uncover<2-> {
+        \draw[->] (gen.south) -- (corr.north)
+        node [at start,right,font=\tiny,yshift=-0.2cm]
+        {$(\gamma_{\text{pieds}}(t), \gamma_{\text{com}}(t))$};
+      }
+
+      \uncover<3-> {
+        \draw[->] (corr.south) -- (ctrl.north)
+        node [at start,right,font=\tiny,yshift=-0.25cm]
+        {$(\gamma'_{\text{pieds}(t)}, \gamma'_{\text{com}}(t))$};
+      }
+
+      \uncover<4-> {
+        \draw[->] (ctrl.south) --++ (0,-1)
+        node [at start,right,font=\tiny,yshift=-0.25cm]
+        {$\dot{\mathbf{q}}(t)$};
+      }
+
+      \draw[<-] (gen.north) --++ (0,1) node [left,font=\tiny,yshift=-0.25cm]
+           {$\mathbf{S}$};
+    \end{tikzpicture}%
+    %
+    \footnotesize{%
+      \hspace{-5cm}%
+      \includegraphics[height=.5cm]{src/slides/idea.pdf}~%
+      Trajectory Following for Legged Robots, Proc. of Biorob'12.%
+    }%
+  \end{center}
+  \end{changeleftmargin}
+\end{slideAction}
+
+\begin{slideAction}
+  \frametitle{Correction timing}
+
+  \begin{center}
+    \vspace{-.5cm}
+    \begin{tikzpicture}
+      \begin{axis}[
+          grid=major,
+          legend style={
+            at={(0.5,-0.2)},
+            anchor=north,
+            legend columns=3,
+            cells={anchor=west},
+            font=\footnotesize,
+            rounded corners=2pt,
+            draw=white
+          },
+          xlabel=time ($s$),
+          ylabel=$x$ position ($m$),
+          no markers,
+          yticklabel pos=lower
+          ]
+
+        \addplot[
+          Thoughtless, thick,
+          dashed
+        ] table [
+          x expr=(\thisrowno{0}-0)*0.005,
+          y expr=\thisrowno{1}+0.04
+          ]{dat/feet_follower_feet-follower-com.dat};
+        \addlegendentry{center of mass}
+
+        \addplot[
+          ThoughtYouWere,
+          dashed,
+        ] table[
+          x index=0,
+          y index=4,
+          x expr=(\thisrowno{0}-0)*0.005,
+          y expr=\thisrowno{4}+0.04
+        ] {dat/feet_follower_feet-follower-left-ankle.dat};
+        \addlegendentry{left foot}
+
+        \addplot[
+          Thoughtless2, thick,
+          dashed,
+        ] table[
+          x index=0,
+          y index=4,
+          x expr=(\thisrowno{0}-0)*0.005,
+          y expr=\thisrowno{4}+0.04
+        ] {dat/feet_follower_feet-follower-right-ankle.dat};
+        \addlegendentry{right foot}
+
+        \addplot[
+          Thoughtless, thick,
+        ] table[
+          x expr=(\thisrowno{0}-0)*0.005
+        ]{dat/feet_follower_correction-com.dat};
+        \addlegendentry{center of mass (corr.)}
+
+        \addplot[
+          ThoughtYouWere, thick,
+        ] table[
+          x index=0,
+          y index=4,
+          x expr=(\thisrowno{0}-0)*0.005,
+        ] {dat/feet_follower_correction-left-ankle.dat};
+        \addlegendentry{left foot (corr.)}
+
+        \addplot[
+          Thoughtless2, thick,
+        ] table[
+          x index=0,
+          y index=4,
+          x expr=(\thisrowno{0}-0)*0.005,
+        ] {dat/feet_follower_correction-right-ankle.dat};
+        \addlegendentry{right foot (corr.)}
+      \end{axis}
+
+      \def\w{0.5}
+      \def\h{0.75}
+      \def\dx{8.}
+
+      \def\dy{.5}
+      % left step planned 1
+      \filldraw[pattern=north east lines,%
+        draw=ThoughtYouWere] (\dx + 0., \dy + 0.5)
+      rectangle (\dx + 0. + \w, \dy + \h + 0.5);
+
+      % left step planned 1 - drift
+      \uncover<2-> {
+        \draw[style=solid,draw=ThoughtYouWere,%
+          line width=1.25] (\dx, \dy - 0.3 + 0.5)
+        rectangle (\dx + \w, \dy + \h - 0.3 + 0.5);
+      }
+
+      \filldraw[pattern=north east lines,%
+        draw=Thoughtless2] (\dx + 1., \dy + 0.5)
+      rectangle (\dx + 1. + \w, \dy + \h + 0.5);
+      \draw<2->[style=solid,color=Thoughtless2,%
+        line width=1.25] (\dx + 1., \dy - 0.3 + 0.5)
+      rectangle (\dx + \w + 1., \dy + \h - 0.3 + 0.5);
+
+
+      % right step planned 1
+      \filldraw[pattern=north east lines,%
+        draw=Thoughtless2] (\dx + 1., \dy + 3.)
+      rectangle (\dx + 1. + \w, \dy + \h + 3.)
+      node [pos=0.5,anchor=north,font=\tiny,yshift=0.75cm] {step 1};
+
+      % right step planned 1 - corrected
+%      \uncover<2-> {
+%        \draw[style=solid,draw=Thoughtless2,line width=1.25]
+%        (\dx + 1., \dy + 3.-0.3)
+%        rectangle (\dx + 1. + \w, \dy + \h + 3. -0.3);
+%      }
+
+      \uncover<3-> {
+        \draw[style=solid,draw=Thoughtless2,%
+          line width=1.25] (\dx + 1., \dy + 3.)
+        rectangle (\dx + 1. + \w, \dy + \h + 3.);
+      }
+
+      \def\dy{3.}
+      % left step planned 2
+      \filldraw[pattern=north east lines,%
+        draw=ThoughtYouWere] (\dx + 0., \dy + 0.5)
+      rectangle (\dx + 0. + \w, \dy + \h + 0.5)
+      node [pos=0.5,anchor=north,font=\tiny,yshift=0.75cm] {step 2};
+
+      % left step planned 2 - corrected
+      \uncover<4-> {
+        \draw[style=solid,draw=ThoughtYouWere,%
+          line width=1.25] (\dx + 0., \dy + 0.5)
+      rectangle (\dx + 0. + \w, \dy + \h + 0.5);
+      }
+    \end{tikzpicture}
+  \end{center}
+\end{slideAction}
+
+\begin{slideAction}
+  \frametitle{Center of mass trajectory update}
+
+  \begin{changeleftmargin}{1.1cm}
+    \begin{itemize}
+    \item Use the linear model.
+    \item Suited to a local, small adaptation.
+    \item Analytical real time solution.
+    \end{itemize}
+
+    \begin{equation*}
+      \mathbf{z} = \mathbf{c} - \frac{z_c}{g} \ddot{\mathbf{c}}
+    \end{equation*}
+
+    \begin{equation*}
+      \mathbf{c}^{(n)}(t) = \mathbf{c}(t)  + \sum_{i=1}^n \Delta^{t_i}(t)
+    \end{equation*}
+  \end{changeleftmargin}
+\end{slideAction}
+
+\fullFrameVideo{src/slides/demo.jpg}{vid/biorob12.mp4}{}
+
+
+\begin{slideDecision}
+  \frametitle{ROS for HRP-2}
+
+  \begin{changemargin}{-1cm}{-1cm}
+  \begin{itemize}
+  \item ROS has been used to develop recent complex demonstrations.
+  \item Used for communication with controller, vision, diagnostic, etc.
+  \item What I mean by ROS:
+    \begin{itemize}
+    \item The robotics middleware,
+    \item and the set of tools related to it.
+    \end{itemize}
+  \end{itemize}
+  \end{changemargin}
+\end{slideDecision}
+
+\maxFrameImageHeight{src/slides/demo2.jpg}
+\maxFrameImage{src/slides/archi.pdf}
+
+\begin{slideDecision}
+  \frametitle{Architecture overview}
+
+  Developped at LAAS:
+  \begin{itemize}
+  \item HRP-2 14 URDF robot model,
+  \item hrpsys and view simulation bridge,
+  \item dynamic-graph bridge,
+  \item localization component.
+  \end{itemize}
+
+  Re-used components:
+  \begin{itemize}
+    \item Vision pipeline% (calibration, low-level image processing).
+    \item Stereo vision% (disparity, point cloud generatin and filtering).
+    \item Coordinate frame management system (tf).
+    \item GUI, diagnostic tools.
+  \end{itemize}
+\end{slideDecision}
+
+\maxFrameImageWidth{src/slides/footsteps1.jpg}
+
+\begin{slideDecision}
+  \frametitle{Locomotion}
+
+  \begin{itemize}
+  \item Locomotion data can be displayed on advance.
+  \item Any ROS compatible GUI can be used (rviz here).
+  \item HRP-2 URDF model is used for display.
+  \end{itemize}
+\end{slideDecision}
+
+\maxFrameImage{src/slides/hrp2_urdf.jpg}
+
+\begin{slideDecision}
+  \frametitle{Geometrical frames handling}
+
+  \begin{itemize}
+  \item tf is used to store frames.
+  \item Ensure data consistency between various components.
+  \item Provide a clean way of dealing with delays and time synchronization.
+  \item REP 120: Coordinate Frames for Humanoids Robots.
+  \end{itemize}
+\end{slideDecision}
+
+\maxFrameImageWidth{src/slides/footsteps2.jpg}
+
+\begin{slideDecision}
+  \frametitle{Vision}
+
+  \begin{itemize}
+  \item hrpsys bridge provides encoders values and send their relative
+    position to tf.
+  \item The vision pipeline integrates debayerisation,
+    rectification, disparity/point cloud from stereo pairs.
+  \item With HRP-2 URDF and the frame management system, reprojection
+    on rectified images is possible.
+  \item All components are always running, only necessary computation
+    are done.
+  \item Ability to regroup several components into one when needed
+    (nodelets).
+  \end{itemize}
+\end{slideDecision}
+
+\maxFrameImageHeight{src/slides/calibextrinsic.jpg}
+\maxFrameImageHeight{src/slides/stereo1.jpg}
+\maxFrameImageWidth{src/slides/shelf.png}
+
+\begin{slideDecision}
+  \frametitle{Object tracking in ROS}
+
+  \begin{itemize}
+  \item Difficult piece of software: need calibration, model, etc.
+  \item Now relies on the vision pipeline, works as a nodelet.
+  \item Now easier to use, more external users (PAL~robotics).
+  \end{itemize}
+\end{slideDecision}
+
+\maxFrameImageWidth{src/slides/rviz-full.jpg}
+
+\begin{slideDecision}
+  \frametitle{Other tools}
+
+  \begin{itemize}
+  \item Motion capture component.
+  \item Diagnostic board.
+  \item Unified log/console.
+  \end{itemize}
+\end{slideDecision}
+
+\begin{slideDecision}
+  \frametitle{Conclusion}
+
+  \begin{itemize}
+  \item A framework for precise trajectory following is proposed.
+  \item Experiments realized with motion capture and visual odometry.
+  \item Requires a more complex robotics infrastructure.
+  \item ROS proved itself useful to achieve this goal.
+  \end{itemize}
+\end{slideDecision}
+
+
+\maxFrameImage{src/slides/hrp2-thx.jpg}
+\end{document}
