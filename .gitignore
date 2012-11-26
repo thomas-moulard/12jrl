@@ -1,0 +1,17 @@
+*.log
+*.aux
+*.aux.make
+*.auxbbl
+*.auxbbl.make
+*.nav
+*.nav.make
+*.temp
+*.auxtarget.make
+*.d
+*.fls
+*.out
+*.out.make
+*.pdf
+*.snm
+*.toc
+*.toc.make

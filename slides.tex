@@ -92,12 +92,32 @@ pdfproducer = {Thomas Moulard}
   \end{frame}
 }
 
-%\maxFrameImage{src/slides/demo1.jpg}
-%\maxFrameImage{src/slides/demo2.jpg}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\begin{slideAction}
+  \frametitle{Past work}
+  \begin{center}
+  \begin{description}
+  \item[2009] Master internship at CNRS-AIST JRL\\
+    RobOptim, optimization framework for robotics
+  \item[2009-2012] PhD at LAAS-CNRS (Toulouse)\\
+    Closed-loop trajectory following for legged robots
+  \item[2012-2014] JSPS post-doc at CNRS-AIST JRL\\
+    Simulating and reproducing human motions using humanoid robots
+  \end{description}
+  \end{center}
+\end{slideAction}
+
+\fullFrameVideo{src/slides/over.jpg}{vid/humanoids11-lbaudouin3.mp4}{%
+    \tiny{%
+      \vspace{-.6cm}%
+      ~\includegraphics[height=.25cm]{src/slides/idea.pdf}~%
+      Real-time Replanning Using 3D Environment for Humanoid Robot,
+      Proc. of Humanoids'11.%
+    }%
+}
 
 \maxFrameImageWidth{src/slides/footsteps1.jpg}
-
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 \begin{slideAction}
   \frametitle{Robot control}
@@ -123,15 +143,6 @@ pdfproducer = {Thomas Moulard}
   \end{center}
   \end{changeleftmargin}
 \end{slideAction}
-
-\fullFrameVideo{src/slides/over.jpg}{vid/humanoids11-lbaudouin3.mp4}{%
-    \tiny{%
-      \vspace{-.6cm}%
-      ~\includegraphics[height=.25cm]{src/slides/idea.pdf}~%
-      Real-time Replanning Using 3D Environment for Humanoid Robot,
-      Proc. of Humanoids'11.%
-    }%
-}
 
 \begin{slideAction}
   \frametitle{Motivation}
@@ -259,13 +270,13 @@ pdfproducer = {Thomas Moulard}
       \uncover<2-> {
         \draw[->] (gen.south) -- (corr.north)
         node [at start,right,font=\tiny,yshift=-0.2cm]
-        {$(\gamma_{\text{pieds}}(t), \gamma_{\text{com}}(t))$};
+        {$(\gamma_{\text{feet}}(t), \gamma_{\text{com}}(t))$};
       }
 
       \uncover<3-> {
         \draw[->] (corr.south) -- (ctrl.north)
         node [at start,right,font=\tiny,yshift=-0.25cm]
-        {$(\gamma'_{\text{pieds}(t)}, \gamma'_{\text{com}}(t))$};
+        {$(\gamma'_{\text{feet}(t)}, \gamma'_{\text{com}}(t))$};
       }
 
       \uncover<4-> {
@@ -442,9 +453,9 @@ pdfproducer = {Thomas Moulard}
       \mathbf{z} = \mathbf{c} - \frac{z_c}{g} \ddot{\mathbf{c}}
     \end{equation*}
 
-    \begin{equation*}
-      \mathbf{c}^{(n)}(t) = \mathbf{c}(t)  + \sum_{i=1}^n \Delta^{t_i}(t)
-    \end{equation*}
+%    \begin{equation*}
+%      \mathbf{c}^{(n)}(t) = \mathbf{c}(t)  + \sum_{i=1}^n \Delta^{t_i}(t)
+%    \end{equation*}
   \end{changeleftmargin}
 \end{slideAction}
 
@@ -456,7 +467,7 @@ pdfproducer = {Thomas Moulard}
 
   \begin{changemargin}{-1cm}{-1cm}
   \begin{itemize}
-  \item ROS has been used to develop recent complex demonstrations.
+  \item ROS has been used to develop recent demonstrations.
   \item Used for communication with controller, vision, diagnostic, etc.
   \item What I mean by ROS:
     \begin{itemize}
@@ -467,7 +478,15 @@ pdfproducer = {Thomas Moulard}
   \end{changemargin}
 \end{slideDecision}
 
-\maxFrameImageHeight{src/slides/demo2.jpg}
+\fullFrameVideo{src/slides/demo2.jpg}{vid/13icra.mp4}{%
+    \tiny{%
+      \vspace{-.6cm}%
+      ~\includegraphics[height=.25cm]{src/slides/idea.pdf}~%
+      Reliable Indoor Navigation on Humanoid Robots using
+      Vision-Based Localization, submitted to ICRA'13.%
+    }%
+}
+
 \maxFrameImage{src/slides/archi.pdf}
 
 \begin{slideDecision}
